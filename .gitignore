@@ -40,3 +40,6 @@ functions
 
 # Local Netlify folder
 .netlify
+
+# mahkeys
+.env
