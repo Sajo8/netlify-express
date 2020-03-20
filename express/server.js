@@ -13,11 +13,11 @@ trtlApp.initialize('7ITsOgFe4QQAY7tJh3yU', process.env.APP_SECRET)
 
 const router = express.Router();
 
-const dlcPrice = 7;
+const dlcPrice = 5;
 const dlcPriceAtomic = dlcPrice * 100;
 
 router.get('/', (req, res) => {
-    res.send("<h1> ur boi sajo yobda </h1>")
+    res.send("<h1> ur boi sajo yondarar </h1>")
 })
 
 /** Creates new account. */
@@ -78,18 +78,27 @@ router.post('/trtlapps/checkIfReceived', async (req, res) => {
         if (account.balanceUnlocked >= dlcPriceAtomic) {
             res.json({
                 err: "",
-                result: true
+                result: true,
+                locked: false
+            })
+        } else if (account.balanceLocked >= dlcPriceAtomic) {
+            res.json({
+                err: "",
+                result: true,
+                locked: true
             })
         } else {
             res.json({
                 err: "",
-                result: false
+                result: false,
+                locked: false
             })
         }
     } else {
         res.json({
             err: error,
-            result: false
+            result: false,
+            locked: false
         });
     }
 });
