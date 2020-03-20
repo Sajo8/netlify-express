@@ -6,25 +6,14 @@ const app = express();
 const bodyParser = require('body-parser');
 const axios = require('axios').default;
 const httpSignature = require('http-signature');
-const crypto = require('crypto')
-
 
 const router = express.Router();
-
-var d;
-
-var addressToSend = "nope";
-
-var pubKey = ""
-var parsed = ""
-var sigResult = false
 
 router.get('/', (req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/html' });
   res.write('ur boi sajo here');
   res.write('hereher');
   res.end()
-  console.log("ya boi");
 })
 
 router.get('/new', (req, res) => {
@@ -38,18 +27,17 @@ router.get('/new', (req, res) => {
         // callback: "https://testsajoeexpress.netlify.com/.netlify/functions/server/turtlepay",
        })
        .then((response) => {
-            d = JSON.stringify(response.data);
+            let d = JSON.stringify(response.data);
 
             res.write("<br><br>");
             res.write(d);
 
-            var jd = JSON.parse(d);
+            let jd = JSON.parse(d);
             console.log(jd);
             pubKey = jd['callbackPublicKey'];
-            addressToSend = jd['sendToAddress'];
 
             res.write("<br><br>");
-            res.write('address: ' + addressToSend);
+            res.write('address: ' + jd['sendToAddress']);
             res.write("<br>");
             res.write('amount: ' + jd['amount']);
 
@@ -58,44 +46,60 @@ router.get('/new', (req, res) => {
 });
 
 router.get('/another', (req, res) => {
-    res.json({ route: req.originalUrl, a:"k" });
+    res.json({ route: req.originalUrl, a:"l" });
 });
 
-var turtleh = "";
-var turtled = "";
+router.post('/turtlepay', (req, res) => {
+    let turtleh = req.headers;
+    let turtled = req.body;
+    let address = turtled['address']
+    let status = turtled['status']
 
+    if (status != 100) {
+        status = false;
+    } else {
+        status = true
+    }
+
+    let parsed;
+    let sigResult;
+
+    try {
+        parsed = httpSignature.parseRequest(req);
+        sigResult = httpSignature.verifySignature(parsed, pubKey);
+    } catch (e) {
+        parsed = "";
+        sigResult = false;
+    }
+
+    res.send({
+        turtleh,
+        turtled,
+        done: status,
+        addr: address,
+        parse: parsed,
+        realOrNot: sigResult,
+    });
+
+});
 
 router.get('/turtlepay', (req, res) => {
     res.json(
         {
-            origAddr: addressToSend,
+            addr: address,
             headers: turtleh,
             data: turtled,
-            pub: pubKey,
+            // pub: pubKey,
             parseR: parsed,
             actualTurtlePay: sigResult,
         }
     );
 });
 
-router.post('/turtlepay', (req, res) => {
-    turtleh = req.headers;
-    turtled = req.body;
-
-    var dataData = JSON.parse(turtled);
-    if (dataData['address'] != addressToSend) {
-        turtleh = "";
-        turtled = "";
-    }
-
-    parsed = httpSignature.parseRequest(req);
-    sigResult = httpSignature.verifySignature(parsed, pubKey)
-});
-
 
 app.use(bodyParser.json());
 app.use('/.netlify/functions/server', router);  // path must route to lambda
-app.use('/', (req, res) => res.sendFile(path.join(__dirname, '../index.html')));
+app.use('/', (req, res) => router); //res.sendFile(path.join(__dirname, '../index.html')));
 
 module.exports = app;
 module.exports.handler = serverless(app);
