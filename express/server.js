@@ -16,25 +16,60 @@ const router = express.Router();
 const dlcPrice = 5;
 const dlcPriceAtomic = dlcPrice * 100;
 
+const dlcEnabled = false;
+
 router.get('/', (req, res) => {
-    res.send("<h1> ur boi sajo yondarar </h1>")
+    res.send("<h1> ur boi sajo onder </h1>")
 })
 
-/** Creates new account. */
-router.get('/trtlapps/newAccount', async (req, res) => {
-    let [account, error] = await trtlApp.createAccount();
+router.get('/trtlapps/getDlcEnabled', (req, res) => {
+    res.json({
+        result: dlcEnabled
+    })
+})
 
+/** Creates new account.
+ * Also gets the tonchan qr code
+ * So we need the dlctype and stuff
+*/
+router.post('/trtlapps/newAccount', async (req, res) => {
+    let accId = "";
+    let typeOfDlc = req.body['dlcType'];
+
+    let recipientName = "";
+
+    if (typeOfDlc == "level") {
+        recipientName = "Chukwa's Labyrinth - Level DLC";
+    } else if (typeOfDlc == "skin") {
+        recipientName = "Chukwa's Labyrinth - Skin DLC";
+    } else {
+        recipientName = "Chukwa's Labyrinth";
+    }
+
+    let [account, error] = await trtlApp.createAccount();
     if (account) {
+        accId = account.id
+    } else {
         res.json({
-            err: "",
+            err: error,
+            qrErr: false
+        })
+    }
+
+    let [qrCode, qrError] = await trtlApp.getAccountQrCode(accId, dlcPriceAtomic, recipientName);
+
+    if (qrCode) {
+        res.json({
+            err: false,
+            qrErr: false,
             accountId: account.id,
-            balance: account.balanceUnlocked,
             address: account.depositAddress,
-            qrCode: account.depositQrCode,
+            qrCode: qrCode,
         });
     } else {
         res.json({
-            err: error
+            err: error,
+            qrErr: qrError,
         });
     }
 });
@@ -45,23 +80,40 @@ router.get('/trtlapps/newAccount', async (req, res) => {
  * Format:
  * {accountId: "foobar"}
  * If this is changed in the save then too bad?
+ *
+ * It also gets a qr code and returns that because i cant be bothered to make another qr code POST request on the client side
+ * For that, we need the type of DLC the person is going to buy
 */
 router.post('/trtlapps/getAccount', async (req, res) => {
-
     let accId = req.body['accountId'];
-    let [account, error] = await trtlApp.getAccount(accId);
+    let typeOfDlc = req.body['dlcType'];
 
-    if (account) {
+    let recipientName = "";
+
+    if (typeOfDlc == "level") {
+        recipientName = "Chukwa's Labyrinth - Level DLC";
+    } else if (typeOfDlc == "skin") {
+        recipientName = "Chukwa's Labyrinth - Skin DLC";
+    } else {
+        recipientName = "Chukwa's Labyrinth";
+    }
+
+    let [account, error] = await trtlApp.getAccount(accId);
+    let [qrCode, qrError] = await trtlApp.getAccountQrCode(accId, dlcPriceAtomic, recipientName);
+
+
+    if (account && qrCode) {
         res.json({
-            err: "",
+            err: false,
+            qrErr: false,
             accountId: account.id,
-            balance: account.balanceUnlocked,
             address: account.depositAddress,
-            qrCode: account.depositQrCode,
+            qrCode: qrCode,
         });
     } else {
         res.json({
             err: error,
+            qrErr: qrError,
         });
     }
 });
@@ -77,19 +129,19 @@ router.post('/trtlapps/checkIfReceived', async (req, res) => {
     if (account) {
         if (account.balanceUnlocked >= dlcPriceAtomic) {
             res.json({
-                err: "",
+                err: false,
                 result: true,
                 locked: false
             })
         } else if (account.balanceLocked >= dlcPriceAtomic) {
             res.json({
-                err: "",
+                err: false,
                 result: true,
                 locked: true
             })
         } else {
             res.json({
-                err: "",
+                err: false,
                 result: false,
                 locked: false
             })
