@@ -16,7 +16,7 @@ const router = express.Router();
 const dlcPrice = 5;
 const dlcPriceAtomic = dlcPrice * 100;
 
-const dlcEnabled = false;
+const dlcEnabled = true;
 
 router.get('/', (req, res) => {
     res.send("<h1> ur boi sajo onder </h1>")
